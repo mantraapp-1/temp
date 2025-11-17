@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+  temporal:
+    image: temporalio/auto-setup:1.23.0
+    environment:
+      - DB=sqlite
+      - DB_FILENAME=/var/lib/temporal/temporal.db
+      - ENABLE_ES=false
+    ports:
+      - "7233:7233"
+    volumes:
+      - temporal-data:/var/lib/temporal
+
+  temporal-web:
+    image: temporalio/web:latest
+    environment:
+      - TEMPORAL_GRPC_ENDPOINT=temporal:7233
+      - TEMPORAL_HTTP_PORT=8088
+      - TEMPORAL_PERMIT_WRITE_API=true
+    ports:
+      - "8088:8088"
+    depends_on:
+      - temporal
+
+  app:
+    build: .
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_NAMESPACE=default
+      - TEMPORAL_TASK_QUEUE=TRANSCRIBE_QUEUE
+      - HTTP_PORT=8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+
+volumes:
+  temporal-data: {}
